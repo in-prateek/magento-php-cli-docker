@@ -1,0 +1,26 @@
+sudo: required
+services:
+  - docker
+env:
+  global:
+    - IMAGE_NAME=iplwarriors/magento2-php-cli
+    - REGISTRY_USER=automatedipl
+
+before_script:
+  - version="$TRAVIS_BUILD_ID"
+  - docker pull "$IMAGE_NAME" || true
+script:
+  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" --build-arg PHP_MEMORY_LIMIT=2G --build-arg MAGENTO_ROOT=/app --build-arg DEBUG=false --build-arg MAGENTO_RUN_MODE=production .
+
+after_script:
+  - docker images
+
+before_deploy:
+  - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
+  - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:latest"
+  - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:${version}"
+deploy:
+  provider: script
+  script: docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${version}"
+  on:
+    branch: master
